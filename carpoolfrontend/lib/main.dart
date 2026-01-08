@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'pages/drivers_page.dart';
 import 'pages/passengers_page.dart';
 import 'pages/assign_page.dart';
+import 'pages/destination_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -43,6 +44,16 @@ class MyHomePage extends StatelessWidget {
                 );
               },
               child: const Text('Drivers'),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DestinationPage()),
+                );
+              },
+              child: const Text('Destination'),
             ),
             const SizedBox(height: 12),
             ElevatedButton(

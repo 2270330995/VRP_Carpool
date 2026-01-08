@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
-import '../models/passenger.dart';
+import '../models/destination.dart';
 import '../service/local_store.dart';
 
-class PassengersPage extends StatefulWidget {
-  const PassengersPage({super.key});
+class DestinationPage extends StatefulWidget {
+  const DestinationPage({super.key});
 
   @override
-  State<PassengersPage> createState() => _PassengersPageState();
+  State<DestinationPage> createState() => _DestinationPageState();
 }
 
-class _PassengersPageState extends State<PassengersPage> {
-  void _openForm({Passenger? existing}) {
-    final nameController = TextEditingController(text: existing?.name ?? '');
+class _DestinationPageState extends State<DestinationPage> {
+  void _openForm() {
+    final current = LocalStore.instance.destination;
+
+    final nameController = TextEditingController(text: current?.name ?? '');
     final addressController = TextEditingController(
-      text: existing?.addressText ?? '',
+      text: current?.addressText ?? '',
     );
     final latController = TextEditingController(
-      text: existing?.lat.toString() ?? '',
+      text: current?.lat.toString() ?? '',
     );
     final lngController = TextEditingController(
-      text: existing?.lng.toString() ?? '',
+      text: current?.lng.toString() ?? '',
     );
 
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: Text(existing == null ? 'Add Passenger' : 'Edit Passenger'),
+          title: Text(current == null ? 'Set Destination' : 'Edit Destination'),
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -68,9 +70,9 @@ class _PassengersPageState extends State<PassengersPage> {
                   return;
                 }
 
-                final passenger = Passenger(
+                final dest = Destination(
                   id:
-                      existing?.id ??
+                      current?.id ??
                       DateTime.now().millisecondsSinceEpoch.toString(),
                   name: nameController.text.trim(),
                   addressText: addressController.text.trim(),
@@ -78,12 +80,7 @@ class _PassengersPageState extends State<PassengersPage> {
                   lng: lng,
                 );
 
-                if (existing == null) {
-                  LocalStore.instance.addPassenger(passenger);
-                } else {
-                  LocalStore.instance.updatePassenger(passenger);
-                }
-
+                LocalStore.instance.setDestination(dest);
                 Navigator.pop(context);
                 setState(() {});
               },
@@ -95,41 +92,30 @@ class _PassengersPageState extends State<PassengersPage> {
     );
   }
 
-  void _deletePassenger(Passenger passenger) {
-    LocalStore.instance.deletePassenger(passenger.id);
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    final passengers = LocalStore.instance.passengers;
+    final dest = LocalStore.instance.destination;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Passengers')),
+      appBar: AppBar(title: const Text('Destination')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: passengers.isEmpty
-            ? const Center(child: Text('No passengers yet.'))
-            : ListView.separated(
-                itemCount: passengers.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final p = passengers[index];
-                  return ListTile(
-                    title: Text(p.name),
-                    subtitle: Text(p.addressText),
-                    onTap: () => _openForm(existing: p),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _deletePassenger(p),
-                    ),
-                  );
-                },
+        child: dest == null
+            ? const Text('No destination set yet.')
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Name: ${dest.name}'),
+                  const SizedBox(height: 6),
+                  Text('Address: ${dest.addressText}'),
+                  const SizedBox(height: 6),
+                  Text('Lat/Lng: ${dest.lat}, ${dest.lng}'),
+                ],
               ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        child: const Icon(Icons.add),
+        onPressed: _openForm,
+        child: const Icon(Icons.edit),
       ),
     );
   }
