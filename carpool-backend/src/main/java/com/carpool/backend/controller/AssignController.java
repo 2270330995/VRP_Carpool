@@ -5,6 +5,11 @@ import com.carpool.backend.entity.*;
 import com.carpool.backend.repository.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ResponseStatusException;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+
 
 import java.util.*;
 
@@ -16,28 +21,48 @@ public class AssignController {
     private final PassengerRepository passengerRepository;
     private final AssignmentRunRepository runRepository;
     private final AssignmentRepository assignmentRepository;
+    private final DestinationRepository destinationRepository;
+
 
     public AssignController(DriverRepository driverRepository,
                             PassengerRepository passengerRepository,
                             AssignmentRunRepository runRepository,
-                            AssignmentRepository assignmentRepository) {
+                            AssignmentRepository assignmentRepository,
+                            DestinationRepository destinationRepository) {
         this.driverRepository = driverRepository;
         this.passengerRepository = passengerRepository;
         this.runRepository = runRepository;
         this.assignmentRepository = assignmentRepository;
+        this.destinationRepository = destinationRepository;
     }
+
 
     // 1) 生成一次新的分配，并写入历史
     // POST /api/assign
     @PostMapping
-    public Map<String, Object> assignAndSave(@RequestParam(value = "note", required = false) String note) {
+    public Map<String, Object> assignAndSave(
+            @RequestParam(value = "note", required = false) String note,
+            @RequestParam(value = "destinationId", required = false) Long destinationId
+    )
+    {
         List<DriverEntity> drivers = driverRepository.findAll();
         List<PassengerEntity> passengers = passengerRepository.findAll();
 
         // 新建一次 run
         AssignmentRunEntity run = new AssignmentRunEntity();
         run.setNote(note);
+
+        if (destinationId != null) {
+            DestinationEntity dest = destinationRepository.findById(destinationId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            NOT_FOUND,
+                            "Destination not found: " + destinationId
+                    ));
+            run.setDestination(dest);
+        }
+
         run = runRepository.save(run);
+
 
         int pIdx = 0;
         int totalAssigned = 0;
@@ -114,11 +139,13 @@ public class AssignController {
     // 把 assignments 聚合成“每个司机的 stops”
     private RunDetailDto buildRunDetail(Long runId) {
         AssignmentRunEntity run = runRepository.findById(runId).orElseThrow();
+        String destinationAddress = (run.getDestination() == null) ? null : run.getDestination().getAddress();
 
         List<AssignmentEntity> rows = assignmentRepository.findByRunIdOrderByDriverIdAscStopOrderAsc(runId);
 
         // driverId -> plan
         Map<Long, RunDetailDto.DriverPlan> planMap = new LinkedHashMap<>();
+        Map<Long, String> driverAddressMap = new HashMap<>();
 
         for (AssignmentEntity a : rows) {
             DriverEntity d = a.getDriver();
@@ -126,12 +153,14 @@ public class AssignController {
 
             RunDetailDto.DriverPlan plan = planMap.computeIfAbsent(d.getId(), k -> {
                 RunDetailDto.DriverPlan dp = new RunDetailDto.DriverPlan();
+                dp.googleMapsUrl = null;
                 dp.driverId = d.getId();
                 dp.driverName = d.getName();
                 dp.seats = d.getSeats() == null ? 0 : d.getSeats();
                 dp.stops = new ArrayList<>();
                 return dp;
             });
+            driverAddressMap.put(d.getId(), d.getAddress());
 
             RunDetailDto.Stop stop = new RunDetailDto.Stop();
             stop.order = a.getStopOrder();
@@ -167,6 +196,24 @@ public class AssignController {
         RunDetailDto dto = new RunDetailDto();
         dto.runId = run.getId();
         dto.createdAt = run.getCreatedAt();
+        if (destinationAddress != null) {
+            for (RunDetailDto.DriverPlan plan : planMap.values()) {
+                String origin = driverAddressMap.get(plan.driverId);
+                if (origin == null || origin.isBlank()) continue;
+
+                // waypoints：乘客地址按 stops 顺序
+                List<String> waypointAddrs = new ArrayList<>();
+                for (RunDetailDto.Stop s : plan.stops) {
+                    if (s.passengerAddress != null && !s.passengerAddress.isBlank()) {
+                        waypointAddrs.add(s.passengerAddress);
+                    }
+                }
+
+                plan.googleMapsUrl = buildGoogleMapsUrl(origin, destinationAddress, waypointAddrs);
+            }
+        }
+
+
         dto.plans = new ArrayList<>(planMap.values());
 
         // 未分配
@@ -176,4 +223,67 @@ public class AssignController {
         return dto;
 
     }
+
+    private String buildGoogleMapsUrl(String origin, String destination, List<String> waypoints) {
+        // Google Maps URL: https://www.google.com/maps/dir/?api=1&origin=...&destination=...&waypoints=a|b|c
+        StringBuilder sb = new StringBuilder("https://www.google.com/maps/dir/?api=1");
+        sb.append("&origin=").append(urlEncode(origin));
+        sb.append("&destination=").append(urlEncode(destination));
+        if (waypoints != null && !waypoints.isEmpty()) {
+            sb.append("&waypoints=");
+            for (int i = 0; i < waypoints.size(); i++) {
+                if (i > 0) sb.append("|");
+                sb.append(urlEncode(waypoints.get(i)));
+            }
+        }
+        return sb.toString();
+    }
+
+    private String urlEncode(String s) {
+        try {
+            return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return s;
+        }
+    }
+
+    @GetMapping("/runs/{runId}/drivers/{driverId}/navigate")
+    public ResponseEntity<?> driverNavigate(@PathVariable Long runId, @PathVariable Long driverId) {
+        AssignmentRunEntity run = runRepository.findById(runId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Run not found: " + runId));
+
+        DestinationEntity destination = run.getDestination();
+        if (destination == null || destination.getAddress() == null || destination.getAddress().isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Run has no destination address");
+        }
+
+        DriverEntity driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Driver not found: " + driverId));
+
+        if (driver.getAddress() == null || driver.getAddress().isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Driver has no address");
+        }
+
+        List<AssignmentEntity> rows =
+                assignmentRepository.findByRunIdAndDriverIdOrderByStopOrderAsc(runId, driverId);
+
+        List<String> waypoints = new ArrayList<>();
+        for (AssignmentEntity a : rows) {
+            PassengerEntity p = a.getPassenger();
+            if (p != null && p.getAddress() != null && !p.getAddress().isBlank()) {
+                waypoints.add(p.getAddress());
+            }
+        }
+
+        String url = buildGoogleMapsUrl(driver.getAddress(), destination.getAddress(), waypoints);
+
+        return ResponseEntity.ok(Map.of(
+                "runId", runId,
+                "driverId", driverId,
+                "driverName", driver.getName(),
+                "destinationAddress", destination.getAddress(),
+                "url", url
+        ));
+    }
+
 }

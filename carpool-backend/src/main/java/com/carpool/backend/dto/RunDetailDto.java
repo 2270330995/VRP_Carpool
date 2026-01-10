@@ -17,6 +17,7 @@ public class RunDetailDto {
         public String driverName;
         public int seats;
         public List<Stop> stops;
+        public String googleMapsUrl;
     }
 
     public static class Stop {

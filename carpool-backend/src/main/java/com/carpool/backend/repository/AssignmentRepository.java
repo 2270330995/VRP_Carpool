@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface AssignmentRepository extends JpaRepository<AssignmentEntity, Long> {
     List<AssignmentEntity> findByRunIdOrderByDriverIdAscStopOrderAsc(Long runId);
+    List<AssignmentEntity> findByRunIdAndDriverIdOrderByStopOrderAsc(Long runId, Long driverId);
+
     void deleteByRunId(Long runId);
 }

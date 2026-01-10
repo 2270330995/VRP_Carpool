@@ -14,6 +14,12 @@ public class AssignmentRunEntity {
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_id")
+    private DestinationEntity destination;
+
+    public DestinationEntity getDestination() { return destination; }
+    public void setDestination(DestinationEntity destination) { this.destination = destination; }
     // 可选：备注（比如“周三早上”）
     private String note;
 

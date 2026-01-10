@@ -46,16 +46,7 @@ class MyHomePage extends StatelessWidget {
               child: const Text('Drivers'),
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DestinationPage()),
-                );
-              },
-              child: const Text('Destination'),
-            ),
-            const SizedBox(height: 12),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -66,6 +57,18 @@ class MyHomePage extends StatelessWidget {
               child: const Text('Passengers'),
             ),
             const SizedBox(height: 12),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DestinationPage()),
+                );
+              },
+              child: const Text('Destination'),
+            ),
+            const SizedBox(height: 12),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

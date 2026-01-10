@@ -13,6 +13,26 @@ class Destination {
     required this.lng,
   });
 
+  factory Destination.fromJson(Map<String, dynamic> json) {
+    return Destination(
+      id: _asString(json['id']),
+      name: _asString(json['name']),
+      addressText: _asString(json['address'] ?? json['addressText']),
+      lat: _asDouble(json['lat']),
+      lng: _asDouble(json['lng']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id.isNotEmpty) 'id': int.tryParse(id) ?? id,
+      'name': name,
+      'address': addressText,
+      // 'lat': lat,
+      // 'lng': lng,
+    };
+  }
+
   Destination copyWith({
     String? id,
     String? name,
@@ -28,4 +48,13 @@ class Destination {
       lng: lng ?? this.lng,
     );
   }
+}
+
+String _asString(dynamic v) => v?.toString() ?? '';
+
+double _asDouble(dynamic v) {
+  if (v is double) return v;
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0.0;
+  return 0.0;
 }
