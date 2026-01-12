@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/driver.dart';
-import '../service/local_store.dart';
+import '../service/api_service.dart';
 
 class DriversPage extends StatefulWidget {
   const DriversPage({super.key});
@@ -10,51 +10,99 @@ class DriversPage extends StatefulWidget {
 }
 
 class _DriversPageState extends State<DriversPage> {
-  void _openForm({Driver? existing}) {
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    final seatsController = TextEditingController(
-      text: existing?.seats.toString() ?? '',
+  final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
+
+  bool _loading = true;
+  String? _error;
+  List<Driver> _drivers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDrivers();
+  }
+
+  Future<void> _loadDrivers() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final list = await api.getDrivers();
+      setState(() => _drivers = list);
+    } catch (e) {
+      setState(() => _error = 'Failed to load drivers: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _confirmDelete(Driver d) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Driver?'),
+        content: Text('Delete "${d.name}"?\n\nThis cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
-    final addressController = TextEditingController(
-      text: existing?.addressText ?? '',
-    );
-    final latController = TextEditingController(
-      text: existing?.lat.toString() ?? '',
-    );
-    final lngController = TextEditingController(
-      text: existing?.lng.toString() ?? '',
-    );
+
+    if (ok != true) return;
+
+    try {
+      await api.deleteDriver(d.id);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('deleted successfully')));
+
+      await _loadDrivers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
+  }
+
+  void _openAddDialog() {
+    final nameCtrl = TextEditingController();
+    final seatsCtrl = TextEditingController(text: '1');
+    final addrCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: Text(existing == null ? 'Add Driver' : 'Edit Driver'),
+          title: const Text('Add Driver'),
           content: SingleChildScrollView(
             child: Column(
               children: [
                 TextField(
-                  controller: nameController,
+                  controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name'),
                 ),
+                const SizedBox(height: 12),
                 TextField(
-                  controller: seatsController,
+                  controller: seatsCtrl,
+                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Seats'),
-                  keyboardType: TextInputType.number,
                 ),
+                const SizedBox(height: 12),
                 TextField(
-                  controller: addressController,
+                  controller: addrCtrl,
                   decoration: const InputDecoration(labelText: 'Address'),
-                ),
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(labelText: 'Lat'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: lngController,
-                  decoration: const InputDecoration(labelText: 'Lng'),
-                  keyboardType: TextInputType.number,
                 ),
               ],
             ),
@@ -65,39 +113,44 @@ class _DriversPageState extends State<DriversPage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                final seats = int.tryParse(seatsController.text.trim());
-                final lat = double.tryParse(latController.text.trim());
-                final lng = double.tryParse(lngController.text.trim());
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                final address = addrCtrl.text.trim();
+                final seats = int.tryParse(seatsCtrl.text.trim()) ?? 0;
 
-                if (seats == null || lat == null || lng == null) {
+                if (name.isEmpty || address.isEmpty || seats <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Seats/Lat/Lng must be numbers'),
+                      content: Text('Name / Seats / Address required'),
                     ),
                   );
                   return;
                 }
 
                 final driver = Driver(
-                  id:
-                      existing?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: nameController.text.trim(),
+                  id: '',
+                  name: name,
                   seats: seats,
-                  addressText: addressController.text.trim(),
-                  lat: lat,
-                  lng: lng,
+                  addressText: address,
                 );
 
-                if (existing == null) {
-                  LocalStore.instance.addDriver(driver);
-                } else {
-                  LocalStore.instance.updateDriver(driver);
-                }
+                try {
+                  await api.addDriver(driver);
 
-                Navigator.pop(context);
-                setState(() {});
+                  if (!mounted) return;
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('added successfully')),
+                  );
+
+                  await _loadDrivers();
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Add failed: $e')));
+                }
               },
               child: const Text('Save'),
             ),
@@ -107,40 +160,55 @@ class _DriversPageState extends State<DriversPage> {
     );
   }
 
-  void _deleteDriver(Driver driver) {
-    LocalStore.instance.deleteDriver(driver.id);
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    final drivers = LocalStore.instance.drivers;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Drivers')),
+      appBar: AppBar(
+        title: const Text('Drivers'),
+        actions: [
+          IconButton(
+            onPressed: _loading ? null : _loadDrivers,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: drivers.isEmpty
-            ? const Center(child: Text('No drivers yet.'))
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _loadDrivers,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              )
+            : _drivers.isEmpty
+            ? const Text('No drivers in backend yet.')
             : ListView.separated(
-                itemCount: drivers.length,
-                separatorBuilder: (_, __) => const Divider(),
+                itemCount: _drivers.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final d = drivers[index];
+                  final d = _drivers[index];
                   return ListTile(
-                    title: Text('${d.name} (${d.seats} seats)'),
-                    subtitle: Text(d.addressText),
-                    onTap: () => _openForm(existing: d),
+                    title: Text(d.name),
+                    subtitle: Text('${d.seats} seats • ${d.addressText}'),
                     trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _deleteDriver(d),
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => _confirmDelete(d),
+                      tooltip: 'Delete',
                     ),
                   );
                 },
               ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
+        onPressed: _openAddDialog,
         child: const Icon(Icons.add),
       ),
     );

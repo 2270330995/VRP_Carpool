@@ -21,6 +21,10 @@ class ApiService {
     return (res.data as List).map((e) => Destination.fromJson(e)).toList();
   }
 
+  Future<void> addDestination(Destination destination) async {
+    await _dio.post('/api/destinations', data: destination.toJson());
+  }
+
   // ---------- Drivers ----------
   Future<List<Driver>> getDrivers() async {
     final res = await _dio.get('/api/drivers');
@@ -50,6 +54,18 @@ class ApiService {
         if (note != null && note.trim().isNotEmpty) 'note': note,
       },
     );
+  }
+
+  Future<void> deleteDriver(String id) async {
+    await _dio.delete('/api/drivers/$id');
+  }
+
+  Future<void> deletePassenger(String id) async {
+    await _dio.delete('/api/passengers/$id');
+  }
+
+  Future<void> deleteDestination(String id) async {
+    await _dio.delete('/api/destinations/$id');
   }
 
   Future<Map<String, dynamic>> getLatestRun() async {

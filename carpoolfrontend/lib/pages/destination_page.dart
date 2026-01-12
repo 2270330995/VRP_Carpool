@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/destination.dart';
-import '../service/local_store.dart';
+import '../service/api_service.dart';
 
 class DestinationPage extends StatefulWidget {
   const DestinationPage({super.key});
@@ -10,112 +10,77 @@ class DestinationPage extends StatefulWidget {
 }
 
 class _DestinationPageState extends State<DestinationPage> {
-  void _openForm() {
-    final current = LocalStore.instance.destination;
+  final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
 
-    final nameController = TextEditingController(text: current?.name ?? '');
-    final addressController = TextEditingController(
-      text: current?.addressText ?? '',
-    );
-    final latController = TextEditingController(
-      text: current?.lat.toString() ?? '',
-    );
-    final lngController = TextEditingController(
-      text: current?.lng.toString() ?? '',
-    );
+  bool loading = true;
+  String? error;
+  List<Destination> destinations = [];
 
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(current == null ? 'Set Destination' : 'Edit Destination'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(labelText: 'Address'),
-                ),
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(labelText: 'Lat'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: lngController,
-                  decoration: const InputDecoration(labelText: 'Lng'),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final lat = double.tryParse(latController.text.trim());
-                final lng = double.tryParse(lngController.text.trim());
+  @override
+  void initState() {
+    super.initState();
+    _loadDestinations();
+  }
 
-                if (lat == null || lng == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Lat/Lng must be numbers')),
-                  );
-                  return;
-                }
+  Future<void> _loadDestinations() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
 
-                final dest = Destination(
-                  id:
-                      current?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: nameController.text.trim(),
-                  addressText: addressController.text.trim(),
-                  lat: lat,
-                  lng: lng,
-                );
-
-                LocalStore.instance.setDestination(dest);
-                Navigator.pop(context);
-                setState(() {});
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
+    try {
+      final list = await api.getDestinations();
+      setState(() {
+        destinations = list;
+      });
+    } catch (e) {
+      setState(() => error = 'Failed to load destinations: $e');
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final dest = LocalStore.instance.destination;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Destination')),
+      appBar: AppBar(
+        title: const Text('Destination'),
+        actions: [
+          IconButton(
+            onPressed: loading ? null : _loadDestinations,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: dest == null
-            ? const Text('No destination set yet.')
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: loading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Name: ${dest.name}'),
-                  const SizedBox(height: 6),
-                  Text('Address: ${dest.addressText}'),
-                  const SizedBox(height: 6),
-                  Text('Lat/Lng: ${dest.lat}, ${dest.lng}'),
+                  Text(error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _loadDestinations,
+                    child: const Text('Retry'),
+                  ),
                 ],
+              )
+            : destinations.isEmpty
+            ? const Text('No destinations yet.')
+            : ListView.separated(
+                itemCount: destinations.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final d = destinations[index];
+                  return ListTile(
+                    title: Text(d.name),
+                    subtitle: Text(d.addressText),
+                  );
+                },
               ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openForm,
-        child: const Icon(Icons.edit),
       ),
     );
   }

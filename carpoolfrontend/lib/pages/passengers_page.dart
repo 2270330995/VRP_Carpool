@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/passenger.dart';
-import '../service/local_store.dart';
+import '../service/api_service.dart';
 
 class PassengersPage extends StatefulWidget {
   const PassengersPage({super.key});
@@ -10,43 +10,60 @@ class PassengersPage extends StatefulWidget {
 }
 
 class _PassengersPageState extends State<PassengersPage> {
-  void _openForm({Passenger? existing}) {
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    final addressController = TextEditingController(
-      text: existing?.addressText ?? '',
-    );
-    final latController = TextEditingController(
-      text: existing?.lat.toString() ?? '',
-    );
-    final lngController = TextEditingController(
-      text: existing?.lng.toString() ?? '',
-    );
+  final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
+
+  bool _loading = true;
+  String? _error;
+  List<Passenger> _passengers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPassengers();
+  }
+
+  Future<void> _loadPassengers() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final list = await api.getPassengers();
+      setState(() {
+        _passengers = list;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load passengers: $e';
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  void _openAddDialog() {
+    final nameCtrl = TextEditingController();
+    final addrCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: Text(existing == null ? 'Add Passenger' : 'Edit Passenger'),
+          title: const Text('Add Passenger'),
           content: SingleChildScrollView(
             child: Column(
               children: [
                 TextField(
-                  controller: nameController,
+                  controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name'),
                 ),
+                const SizedBox(height: 12),
                 TextField(
-                  controller: addressController,
+                  controller: addrCtrl,
                   decoration: const InputDecoration(labelText: 'Address'),
-                ),
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(labelText: 'Lat'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: lngController,
-                  decoration: const InputDecoration(labelText: 'Lng'),
-                  keyboardType: TextInputType.number,
                 ),
               ],
             ),
@@ -57,35 +74,40 @@ class _PassengersPageState extends State<PassengersPage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                final lat = double.tryParse(latController.text.trim());
-                final lng = double.tryParse(lngController.text.trim());
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                final address = addrCtrl.text.trim();
 
-                if (lat == null || lng == null) {
+                if (name.isEmpty || address.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Lat/Lng must be numbers')),
+                    const SnackBar(content: Text('Name / Address required')),
                   );
                   return;
                 }
 
                 final passenger = Passenger(
-                  id:
-                      existing?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  name: nameController.text.trim(),
-                  addressText: addressController.text.trim(),
-                  lat: lat,
-                  lng: lng,
+                  id: '',
+                  name: name,
+                  addressText: address,
                 );
 
-                if (existing == null) {
-                  LocalStore.instance.addPassenger(passenger);
-                } else {
-                  LocalStore.instance.updatePassenger(passenger);
-                }
+                try {
+                  await api.addPassenger(passenger);
 
-                Navigator.pop(context);
-                setState(() {});
+                  if (!mounted) return;
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('added successfully')),
+                  );
+
+                  await _loadPassengers();
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Add failed: $e')));
+                }
               },
               child: const Text('Save'),
             ),
@@ -95,40 +117,50 @@ class _PassengersPageState extends State<PassengersPage> {
     );
   }
 
-  void _deletePassenger(Passenger passenger) {
-    LocalStore.instance.deletePassenger(passenger.id);
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    final passengers = LocalStore.instance.passengers;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Passengers')),
+      appBar: AppBar(
+        title: const Text('Passengers'),
+        actions: [
+          IconButton(
+            onPressed: _loading ? null : _loadPassengers,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: passengers.isEmpty
-            ? const Center(child: Text('No passengers yet.'))
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _loadPassengers,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              )
+            : _passengers.isEmpty
+            ? const Text('No passengers in backend yet.')
             : ListView.separated(
-                itemCount: passengers.length,
-                separatorBuilder: (_, __) => const Divider(),
+                itemCount: _passengers.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final p = passengers[index];
+                  final p = _passengers[index];
                   return ListTile(
                     title: Text(p.name),
                     subtitle: Text(p.addressText),
-                    onTap: () => _openForm(existing: p),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _deletePassenger(p),
-                    ),
                   );
                 },
               ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
+        onPressed: _openAddDialog,
         child: const Icon(Icons.add),
       ),
     );

@@ -3,8 +3,6 @@ class Driver {
   final String name;
   final int seats;
   final String addressText;
-  final double lat;
-  final double lng;
   final String? carModel; // 兼容后端字段（如果有）
 
   Driver({
@@ -12,8 +10,6 @@ class Driver {
     required this.name,
     required this.seats,
     required this.addressText,
-    required this.lat,
-    required this.lng,
     this.carModel,
   });
 
@@ -23,8 +19,6 @@ class Driver {
       name: _asString(json['name']),
       seats: _asInt(json['seats']),
       addressText: _asString(json['address'] ?? json['addressText']),
-      lat: _asDouble(json['lat']),
-      lng: _asDouble(json['lng']),
       carModel: json['carModel']?.toString(),
     );
   }
@@ -36,8 +30,6 @@ class Driver {
       'seats': seats,
       'address': addressText,
       if (carModel != null && carModel!.trim().isNotEmpty) 'carModel': carModel,
-      // 'lat': lat,
-      // 'lng': lng,
     };
   }
 
@@ -46,8 +38,6 @@ class Driver {
     String? name,
     int? seats,
     String? addressText,
-    double? lat,
-    double? lng,
     String? carModel,
   }) {
     return Driver(
@@ -55,8 +45,6 @@ class Driver {
       name: name ?? this.name,
       seats: seats ?? this.seats,
       addressText: addressText ?? this.addressText,
-      lat: lat ?? this.lat,
-      lng: lng ?? this.lng,
       carModel: carModel ?? this.carModel,
     );
   }
@@ -69,11 +57,4 @@ int _asInt(dynamic v) {
   if (v is num) return v.toInt();
   if (v is String) return int.tryParse(v) ?? 0;
   return 0;
-}
-
-double _asDouble(dynamic v) {
-  if (v is double) return v;
-  if (v is num) return v.toDouble();
-  if (v is String) return double.tryParse(v) ?? 0.0;
-  return 0.0;
 }
