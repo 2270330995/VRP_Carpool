@@ -42,11 +42,23 @@ public class AssignController {
     @PostMapping
     public Map<String, Object> assignAndSave(
             @RequestParam(value = "note", required = false) String note,
-            @RequestParam(value = "destinationId", required = false) Long destinationId
+            @RequestParam(value = "destinationId", required = false) Long destinationId,
+            @RequestParam(value = "driverIds", required = false) List<Long> driverIds,
+            @RequestParam(value = "passengerIds", required = false) List<Long> passengerIds
     )
     {
-        List<DriverEntity> drivers = driverRepository.findByActiveTrueOrActiveIsNull();
-        List<PassengerEntity> passengers = passengerRepository.findByActiveTrueOrActiveIsNull();
+        List<DriverEntity> drivers = (driverIds == null || driverIds.isEmpty())
+                ? driverRepository.findByActiveTrueOrActiveIsNull()
+                : driverRepository.findAllById(driverIds)
+                        .stream()
+                        .filter(d -> d.getActive() == null || d.getActive())
+                        .collect(java.util.stream.Collectors.toList());
+        List<PassengerEntity> passengers = (passengerIds == null || passengerIds.isEmpty())
+                ? passengerRepository.findByActiveTrueOrActiveIsNull()
+                : passengerRepository.findAllById(passengerIds)
+                        .stream()
+                        .filter(p -> p.getActive() == null || p.getActive())
+                        .collect(java.util.stream.Collectors.toList());
 
         // 新建一次 run
         AssignmentRunEntity run = new AssignmentRunEntity();
@@ -112,18 +124,23 @@ public class AssignController {
     // 3) 最新一次 run 详情
     // GET /api/assign/runs/latest
     @GetMapping("/runs/latest")
-    public ResponseEntity<?> latestRunDetail() {
+    public ResponseEntity<?> latestRunDetail(
+            @RequestParam(value = "passengerIds", required = false) List<Long> passengerIds
+    ) {
         AssignmentRunEntity latest = runRepository.findTopByOrderByCreatedAtDesc();
         if (latest == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(buildRunDetail(latest.getId()));
+        return ResponseEntity.ok(buildRunDetail(latest.getId(), passengerIds));
     }
 
     // 4) 某一次 run 的详细分配
     // GET /api/assign/runs/{runId}
     @GetMapping("/runs/{runId}")
-    public ResponseEntity<?> runDetail(@PathVariable Long runId) {
+    public ResponseEntity<?> runDetail(
+            @PathVariable Long runId,
+            @RequestParam(value = "passengerIds", required = false) List<Long> passengerIds
+    ) {
         if (!runRepository.existsById(runId)) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(buildRunDetail(runId));
+        return ResponseEntity.ok(buildRunDetail(runId, passengerIds));
     }
 
     // （可选）删除某次历史
@@ -137,7 +154,7 @@ public class AssignController {
     }
 
     // 把 assignments 聚合成“每个司机的 stops”
-    private RunDetailDto buildRunDetail(Long runId) {
+    private RunDetailDto buildRunDetail(Long runId, List<Long> passengerIds) {
         AssignmentRunEntity run = runRepository.findById(runId).orElseThrow();
         String destinationAddress = (run.getDestination() == null) ? null : run.getDestination().getAddress();
 
@@ -178,7 +195,15 @@ public class AssignController {
         }
 
 // 找出未分配的乘客（出现在 passengers 表里，但不在本次 assignments 里）
-        List<PassengerEntity> allPassengers = passengerRepository.findByActiveTrueOrActiveIsNull();
+        List<PassengerEntity> allPassengers;
+        if (passengerIds == null || passengerIds.isEmpty()) {
+            allPassengers = passengerRepository.findByActiveTrueOrActiveIsNull();
+        } else {
+            allPassengers = passengerRepository.findAllById(passengerIds)
+                    .stream()
+                    .filter(p -> p.getActive() == null || p.getActive())
+                    .collect(java.util.stream.Collectors.toList());
+        }
         List<RunDetailDto.Stop> unassignedStops = new ArrayList<>();
         for (PassengerEntity p : allPassengers) {
             if (!assignedPassengerIds.contains(p.getId())) {

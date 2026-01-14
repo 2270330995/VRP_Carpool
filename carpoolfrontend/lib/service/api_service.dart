@@ -65,12 +65,20 @@ class ApiService {
   }
 
   // ---------- Assign ----------
-  Future<void> assign({required int destinationId, String? note}) async {
+  Future<void> assign({
+    required int destinationId,
+    String? note,
+    List<String>? driverIds,
+    List<String>? passengerIds,
+  }) async {
     await _dio.post(
       '/api/assign',
       queryParameters: {
         'destinationId': destinationId,
         if (note != null && note.trim().isNotEmpty) 'note': note,
+        if (driverIds != null && driverIds.isNotEmpty) 'driverIds': driverIds,
+        if (passengerIds != null && passengerIds.isNotEmpty)
+          'passengerIds': passengerIds,
       },
     );
   }
@@ -95,8 +103,16 @@ class ApiService {
     await _dio.delete('/api/destinations/$id');
   }
 
-  Future<Map<String, dynamic>> getLatestRun() async {
-    final res = await _dio.get('/api/assign/runs/latest');
+  Future<Map<String, dynamic>> getLatestRun({
+    List<String>? passengerIds,
+  }) async {
+    final res = await _dio.get(
+      '/api/assign/runs/latest',
+      queryParameters: {
+        if (passengerIds != null && passengerIds.isNotEmpty)
+          'passengerIds': passengerIds,
+      },
+    );
     return res.data;
   }
 
