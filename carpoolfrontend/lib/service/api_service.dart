@@ -16,8 +16,13 @@ class ApiService {
   final Dio _dio;
 
   // ---------- Destinations ----------
-  Future<List<Destination>> getDestinations() async {
-    final res = await _dio.get('/api/destinations');
+  Future<List<Destination>> getDestinations({bool includeInactive = false}) async {
+    final res = await _dio.get(
+      '/api/destinations',
+      queryParameters: {
+        if (includeInactive) 'includeInactive': true,
+      },
+    );
     return (res.data as List).map((e) => Destination.fromJson(e)).toList();
   }
 
@@ -25,9 +30,18 @@ class ApiService {
     await _dio.post('/api/destinations', data: destination.toJson());
   }
 
+  Future<void> restoreDestination(String id) async {
+    await _dio.patch('/api/destinations/$id/restore');
+  }
+
   // ---------- Drivers ----------
-  Future<List<Driver>> getDrivers() async {
-    final res = await _dio.get('/api/drivers');
+  Future<List<Driver>> getDrivers({bool includeInactive = false}) async {
+    final res = await _dio.get(
+      '/api/drivers',
+      queryParameters: {
+        if (includeInactive) 'includeInactive': true,
+      },
+    );
     return (res.data as List).map((e) => Driver.fromJson(e)).toList();
   }
 
@@ -36,8 +50,13 @@ class ApiService {
   }
 
   // ---------- Passengers ----------
-  Future<List<Passenger>> getPassengers() async {
-    final res = await _dio.get('/api/passengers');
+  Future<List<Passenger>> getPassengers({bool includeInactive = false}) async {
+    final res = await _dio.get(
+      '/api/passengers',
+      queryParameters: {
+        if (includeInactive) 'includeInactive': true,
+      },
+    );
     return (res.data as List).map((e) => Passenger.fromJson(e)).toList();
   }
 
@@ -60,8 +79,16 @@ class ApiService {
     await _dio.delete('/api/drivers/$id');
   }
 
+  Future<void> restoreDriver(String id) async {
+    await _dio.patch('/api/drivers/$id/restore');
+  }
+
   Future<void> deletePassenger(String id) async {
     await _dio.delete('/api/passengers/$id');
+  }
+
+  Future<void> restorePassenger(String id) async {
+    await _dio.patch('/api/passengers/$id/restore');
   }
 
   Future<void> deleteDestination(String id) async {

@@ -15,6 +15,8 @@ class _DriversPageState extends State<DriversPage> {
   bool _loading = true;
   String? _error;
   List<Driver> _drivers = [];
+  List<Driver> _deletedDrivers = [];
+  bool _showDeleted = false;
 
   @override
   void initState() {
@@ -29,8 +31,20 @@ class _DriversPageState extends State<DriversPage> {
     });
 
     try {
-      final list = await api.getDrivers();
-      setState(() => _drivers = list);
+      final list = await api.getDrivers(includeInactive: true);
+      final active = <Driver>[];
+      final inactive = <Driver>[];
+      for (final d in list) {
+        if (d.active) {
+          active.add(d);
+        } else {
+          inactive.add(d);
+        }
+      }
+      setState(() {
+        _drivers = active;
+        _deletedDrivers = inactive;
+      });
     } catch (e) {
       setState(() => _error = 'Failed to load drivers: $e');
     } finally {
@@ -43,7 +57,7 @@ class _DriversPageState extends State<DriversPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Driver?'),
-        content: Text('Delete "${d.name}"?\n\nThis cannot be undone.'),
+        content: Text('Delete "${d.name}"?\n\nYou can restore it later.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -73,6 +87,22 @@ class _DriversPageState extends State<DriversPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
+  }
+
+  Future<void> _restoreDriver(Driver d) async {
+    try {
+      await api.restoreDriver(d.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('restored successfully')));
+      await _loadDrivers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
     }
   }
 
@@ -167,6 +197,11 @@ class _DriversPageState extends State<DriversPage> {
         title: const Text('Drivers'),
         actions: [
           IconButton(
+            onPressed: () => setState(() => _showDeleted = !_showDeleted),
+            icon: Icon(_showDeleted ? Icons.visibility_off : Icons.visibility),
+            tooltip: _showDeleted ? 'Hide Deleted' : 'Show Deleted',
+          ),
+          IconButton(
             onPressed: _loading ? null : _loadDrivers,
             icon: const Icon(Icons.refresh),
           ),
@@ -188,23 +223,52 @@ class _DriversPageState extends State<DriversPage> {
                   ),
                 ],
               )
-            : _drivers.isEmpty
+            : _drivers.isEmpty && _deletedDrivers.isEmpty
             ? const Text('No drivers in backend yet.')
-            : ListView.separated(
-                itemCount: _drivers.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final d = _drivers[index];
-                  return ListTile(
-                    title: Text(d.name),
-                    subtitle: Text('${d.seats} seats • ${d.addressText}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _confirmDelete(d),
-                      tooltip: 'Delete',
+            : ListView(
+                children: [
+                  if (_drivers.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Active',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  );
-                },
+                    ..._drivers.map(
+                      (d) => ListTile(
+                        title: Text(d.name),
+                        subtitle: Text('${d.seats} seats • ${d.addressText}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _confirmDelete(d),
+                          tooltip: 'Delete',
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 24),
+                  ],
+                  if (_showDeleted && _deletedDrivers.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Deleted',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ..._deletedDrivers.map(
+                      (d) => ListTile(
+                        title: Text(d.name),
+                        subtitle: Text('${d.seats} seats • ${d.addressText}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.undo),
+                          onPressed: () => _restoreDriver(d),
+                          tooltip: 'Restore',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
       ),
       floatingActionButton: FloatingActionButton(

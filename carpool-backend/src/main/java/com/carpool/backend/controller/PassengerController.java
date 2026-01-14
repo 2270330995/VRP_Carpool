@@ -20,8 +20,13 @@ public class PassengerController {
 
     // GET /api/passengers
     @GetMapping
-    public List<PassengerEntity> getAllPassengers() {
-        return passengerRepository.findAll();
+    public List<PassengerEntity> getAllPassengers(
+            @RequestParam(value = "includeInactive", required = false) Boolean includeInactive
+    ) {
+        if (Boolean.TRUE.equals(includeInactive)) {
+            return passengerRepository.findAll();
+        }
+        return passengerRepository.findByActiveTrueOrActiveIsNull();
     }
 
     // POST /api/passengers
@@ -45,11 +50,25 @@ public class PassengerController {
 
     // Delete
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePassenger(@PathVariable Long id) {
-        if (!passengerRepository.existsById(id)) return ResponseEntity.notFound().build();
-        passengerRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deletePassenger(@PathVariable Long id) {
+        return passengerRepository.findById(id)
+                .map(p -> {
+                    p.setActive(false);
+                    passengerRepository.save(p);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<?> restorePassenger(@PathVariable Long id) {
+        return passengerRepository.findById(id)
+                .map(p -> {
+                    p.setActive(true);
+                    passengerRepository.save(p);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 
 }

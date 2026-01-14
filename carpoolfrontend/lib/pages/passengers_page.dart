@@ -15,6 +15,8 @@ class _PassengersPageState extends State<PassengersPage> {
   bool _loading = true;
   String? _error;
   List<Passenger> _passengers = [];
+  List<Passenger> _deletedPassengers = [];
+  bool _showDeleted = false;
 
   @override
   void initState() {
@@ -29,9 +31,19 @@ class _PassengersPageState extends State<PassengersPage> {
     });
 
     try {
-      final list = await api.getPassengers();
+      final list = await api.getPassengers(includeInactive: true);
+      final active = <Passenger>[];
+      final inactive = <Passenger>[];
+      for (final p in list) {
+        if (p.active) {
+          active.add(p);
+        } else {
+          inactive.add(p);
+        }
+      }
       setState(() {
-        _passengers = list;
+        _passengers = active;
+        _deletedPassengers = inactive;
       });
     } catch (e) {
       setState(() {
@@ -41,6 +53,58 @@ class _PassengersPageState extends State<PassengersPage> {
       setState(() {
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _confirmDelete(Passenger p) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Passenger?'),
+        content: Text('Delete "${p.name}"?\n\nYou can restore it later.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await api.deletePassenger(p.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('deleted successfully')));
+      await _loadPassengers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
+  }
+
+  Future<void> _restorePassenger(Passenger p) async {
+    try {
+      await api.restorePassenger(p.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('restored successfully')));
+      await _loadPassengers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
     }
   }
 
@@ -124,6 +188,11 @@ class _PassengersPageState extends State<PassengersPage> {
         title: const Text('Passengers'),
         actions: [
           IconButton(
+            onPressed: () => setState(() => _showDeleted = !_showDeleted),
+            icon: Icon(_showDeleted ? Icons.visibility_off : Icons.visibility),
+            tooltip: _showDeleted ? 'Hide Deleted' : 'Show Deleted',
+          ),
+          IconButton(
             onPressed: _loading ? null : _loadPassengers,
             icon: const Icon(Icons.refresh),
           ),
@@ -145,18 +214,52 @@ class _PassengersPageState extends State<PassengersPage> {
                   ),
                 ],
               )
-            : _passengers.isEmpty
+            : _passengers.isEmpty && _deletedPassengers.isEmpty
             ? const Text('No passengers in backend yet.')
-            : ListView.separated(
-                itemCount: _passengers.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final p = _passengers[index];
-                  return ListTile(
-                    title: Text(p.name),
-                    subtitle: Text(p.addressText),
-                  );
-                },
+            : ListView(
+                children: [
+                  if (_passengers.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Active',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ..._passengers.map(
+                      (p) => ListTile(
+                        title: Text(p.name),
+                        subtitle: Text(p.addressText),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _confirmDelete(p),
+                          tooltip: 'Delete',
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 24),
+                  ],
+                  if (_showDeleted && _deletedPassengers.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Deleted',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ..._deletedPassengers.map(
+                      (p) => ListTile(
+                        title: Text(p.name),
+                        subtitle: Text(p.addressText),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.undo),
+                          onPressed: () => _restorePassenger(p),
+                          tooltip: 'Restore',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
       ),
       floatingActionButton: FloatingActionButton(

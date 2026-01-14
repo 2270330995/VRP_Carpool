@@ -2,6 +2,7 @@ package com.carpool.backend.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.carpool.backend.entity.DriverEntity;
@@ -18,8 +19,13 @@ public class DriverController {
     }
 
     @GetMapping
-    public List<DriverEntity> getAllDrivers() {
-        return driverRepository.findAll();
+    public List<DriverEntity> getAllDrivers(
+            @RequestParam(value = "includeInactive", required = false) Boolean includeInactive
+    ) {
+        if (Boolean.TRUE.equals(includeInactive)) {
+            return driverRepository.findAll();
+        }
+        return driverRepository.findByActiveTrueOrActiveIsNull();
     }
 
     @PostMapping
@@ -42,8 +48,25 @@ public class DriverController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteDriver(@PathVariable Long id) {
-        driverRepository.deleteById(id);
+    public ResponseEntity<?> deleteDriver(@PathVariable Long id) {
+        return driverRepository.findById(id)
+                .map(d -> {
+                    d.setActive(false);
+                    driverRepository.save(d);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<?> restoreDriver(@PathVariable Long id) {
+        return driverRepository.findById(id)
+                .map(d -> {
+                    d.setActive(true);
+                    driverRepository.save(d);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
 }

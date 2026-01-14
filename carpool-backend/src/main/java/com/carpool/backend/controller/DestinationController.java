@@ -18,8 +18,13 @@ public class DestinationController {
     }
 
     @GetMapping
-    public List<DestinationEntity> list() {
-        return repo.findAll();
+    public List<DestinationEntity> list(
+            @RequestParam(value = "includeInactive", required = false) Boolean includeInactive
+    ) {
+        if (Boolean.TRUE.equals(includeInactive)) {
+            return repo.findAll();
+        }
+        return repo.findByActiveTrueOrActiveIsNull();
     }
 
     @PostMapping
@@ -40,8 +45,23 @@ public class DestinationController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        if (!repo.existsById(id)) return ResponseEntity.notFound().build();
-        repo.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return repo.findById(id)
+                .map(d -> {
+                    d.setActive(false);
+                    repo.save(d);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<?> restore(@PathVariable Long id) {
+        return repo.findById(id)
+                .map(d -> {
+                    d.setActive(true);
+                    repo.save(d);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -45,8 +45,8 @@ public class AssignController {
             @RequestParam(value = "destinationId", required = false) Long destinationId
     )
     {
-        List<DriverEntity> drivers = driverRepository.findAll();
-        List<PassengerEntity> passengers = passengerRepository.findAll();
+        List<DriverEntity> drivers = driverRepository.findByActiveTrueOrActiveIsNull();
+        List<PassengerEntity> passengers = passengerRepository.findByActiveTrueOrActiveIsNull();
 
         // 新建一次 run
         AssignmentRunEntity run = new AssignmentRunEntity();
@@ -178,7 +178,7 @@ public class AssignController {
         }
 
 // 找出未分配的乘客（出现在 passengers 表里，但不在本次 assignments 里）
-        List<PassengerEntity> allPassengers = passengerRepository.findAll();
+        List<PassengerEntity> allPassengers = passengerRepository.findByActiveTrueOrActiveIsNull();
         List<RunDetailDto.Stop> unassignedStops = new ArrayList<>();
         for (PassengerEntity p : allPassengers) {
             if (!assignedPassengerIds.contains(p.getId())) {

@@ -26,6 +26,9 @@ public class DriverEntity {
     @Column(nullable=false)
     private String address;
 
+    @Column
+    private Boolean active = true;
+
     public DriverEntity() {}
 
     public Long getId() { return id; }
@@ -33,9 +36,11 @@ public class DriverEntity {
     public String getCarModel() { return carModel; }
     public Integer getSeats() { return seats; }
     public String getAddress() { return address; }
+    public Boolean getActive() { return active; }
 
     public void setName(String name) { this.name = name; }
     public void setCarModel(String carModel) { this.carModel = carModel; }
     public void setSeats(Integer seats) { this.seats = seats; }
     public void setAddress(String address) { this.address = address; }
+    public void setActive(Boolean active) { this.active = active; }
 }
