@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/destination.dart';
@@ -159,6 +160,22 @@ class _AssignPageState extends State<AssignPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Navigate failed: $e')));
+    }
+  }
+
+  Future<void> _copyNavigateUrl(int runId, int driverId) async {
+    try {
+      final url = await api.getNavigateUrl(runId: runId, driverId: driverId);
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Link copied')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Copy failed: $e')));
     }
   }
 
@@ -417,11 +434,18 @@ class _AssignPageState extends State<AssignPage> {
                               ),
                             ),
                           ),
-                          if (runId != null && driverId != -1)
+                          if (runId != null && driverId != -1) ...[
                             OutlinedButton(
                               onPressed: () => _navigate(runId, driverId),
                               child: const Text('Navigate'),
                             ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              tooltip: 'Copy link',
+                              icon: const Icon(Icons.link),
+                              onPressed: () => _copyNavigateUrl(runId, driverId),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 8),
