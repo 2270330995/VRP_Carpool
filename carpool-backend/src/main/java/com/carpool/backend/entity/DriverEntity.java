@@ -26,6 +26,12 @@ public class DriverEntity {
     @Column(nullable=false)
     private String address;
 
+    @Column(nullable = false)
+    private Double lat;
+
+    @Column(nullable = false)
+    private Double lng;
+
     @Column
     private Boolean active = true;
 
@@ -43,4 +49,10 @@ public class DriverEntity {
     public void setSeats(Integer seats) { this.seats = seats; }
     public void setAddress(String address) { this.address = address; }
     public void setActive(Boolean active) { this.active = active; }
+
+    public Double getLat() { return lat; }
+    public Double getLng() { return lng; }
+    public void setLat(Double lat) { this.lat = lat; }
+    public void setLng(Double lng) { this.lng = lng; }
+
 }

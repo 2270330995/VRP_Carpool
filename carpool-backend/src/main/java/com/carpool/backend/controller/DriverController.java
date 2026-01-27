@@ -43,6 +43,8 @@ public class DriverController {
         d.setCarModel(body.getCarModel());
         d.setSeats(body.getSeats());
         d.setAddress(body.getAddress());
+        d.setLat(body.getLat());
+        d.setLng(body.getLng());
 
         return driverRepository.save(d);
     }

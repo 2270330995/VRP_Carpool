@@ -44,6 +44,8 @@ public class PassengerController {
 
         p.setName(body.getName());
         p.setAddress(body.getAddress());
+        p.setLat(body.getLat());
+        p.setLng(body.getLng());
 
         return passengerRepository.save(p);
     }

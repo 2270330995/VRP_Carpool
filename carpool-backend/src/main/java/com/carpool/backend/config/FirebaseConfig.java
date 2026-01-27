@@ -5,11 +5,13 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 
+@Profile("firebase")
 @Configuration
 public class FirebaseConfig {
 

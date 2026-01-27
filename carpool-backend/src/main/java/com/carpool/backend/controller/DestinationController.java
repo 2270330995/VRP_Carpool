@@ -38,6 +38,8 @@ public class DestinationController {
                 .map(d -> {
                     d.setName(body.getName());
                     d.setAddress(body.getAddress());
+                    d.setLat(body.getLat());
+                    d.setLng(body.getLng());
                     return ResponseEntity.ok(repo.save(d));
                 })
                 .orElse(ResponseEntity.notFound().build());
