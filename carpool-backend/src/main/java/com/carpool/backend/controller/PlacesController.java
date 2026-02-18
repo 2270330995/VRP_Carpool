@@ -12,7 +12,7 @@ import com.carpool.backend.dto.PlaceSuggestion;
 import com.carpool.backend.service.PlacesService;
 
 @RestController
-@RequestMapping("/api/places")
+@RequestMapping("/api/places/legacy")
 public class PlacesController {
 
     private final PlacesService placesService;

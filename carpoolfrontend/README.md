@@ -1,16 +1,16 @@
-# carpoolfrontend
+# Carpool Frontend
 
-A new Flutter project.
+## Run with Google Places API key
+This app reads the Places Web Service API key from a compile-time define:
 
-## Getting Started
+```bash
+flutter run --dart-define=GOOGLE_MAPS_API_KEY=YOUR_API_KEY
+```
 
-This project is a starting point for a Flutter application.
+Use an API key with these APIs enabled in Google Cloud:
+- Places API
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The demo `Plan Carpool (Demo)` page uses:
+- Places Autocomplete (Web Service)
+- Place Details (Web Service)
+- Backend optimize endpoint: `http://localhost:8080/api/optimize`

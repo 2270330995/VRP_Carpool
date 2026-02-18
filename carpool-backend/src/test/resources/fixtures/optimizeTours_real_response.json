@@ -1,0 +1,126 @@
+{
+  "routes": [
+    {
+      "vehicleIndex": 0,
+      "vehicleStartTime": "2026-01-01T00:00:00Z",
+      "vehicleEndTime": "2026-01-01T00:48:00Z",
+      "visits": [
+        {
+          "shipmentIndex": 0,
+          "isPickup": true,
+          "startTime": "2026-01-01T00:08:00Z",
+          "detour": "120s",
+          "label": "pickup_student_1",
+          "shipmentLabel": "student_1"
+        },
+        {
+          "shipmentIndex": 1,
+          "isPickup": true,
+          "startTime": "2026-01-01T00:16:00Z",
+          "detour": "180s",
+          "label": "pickup_student_2",
+          "shipmentLabel": "student_2"
+        },
+        {
+          "shipmentIndex": 0,
+          "isPickup": false,
+          "startTime": "2026-01-01T00:34:00Z",
+          "detour": "60s",
+          "label": "dropoff_student_1",
+          "shipmentLabel": "student_1"
+        },
+        {
+          "shipmentIndex": 1,
+          "isPickup": false,
+          "startTime": "2026-01-01T00:42:00Z",
+          "detour": "60s",
+          "label": "dropoff_student_2",
+          "shipmentLabel": "student_2"
+        }
+      ],
+      "transitions": [
+        {
+          "travelDuration": "480s",
+          "waitDuration": "0s",
+          "totalDuration": "480s"
+        },
+        {
+          "travelDuration": "480s",
+          "waitDuration": "0s",
+          "totalDuration": "480s"
+        },
+        {
+          "travelDuration": "1080s",
+          "waitDuration": "0s",
+          "totalDuration": "1080s"
+        },
+        {
+          "travelDuration": "480s",
+          "waitDuration": "0s",
+          "totalDuration": "480s"
+        },
+        {
+          "travelDuration": "360s",
+          "waitDuration": "0s",
+          "totalDuration": "360s"
+        }
+      ],
+      "metrics": {
+        "performedShipmentCount": 2,
+        "travelDuration": "2880s",
+        "visitDuration": "0s"
+      }
+    },
+    {
+      "vehicleIndex": 1,
+      "vehicleStartTime": "2026-01-01T00:00:00Z",
+      "vehicleEndTime": "2026-01-01T00:30:00Z",
+      "visits": [
+        {
+          "shipmentIndex": 2,
+          "isPickup": true,
+          "startTime": "2026-01-01T00:09:00Z",
+          "detour": "120s",
+          "label": "pickup_student_3",
+          "shipmentLabel": "student_3"
+        },
+        {
+          "shipmentIndex": 2,
+          "isPickup": false,
+          "startTime": "2026-01-01T00:24:00Z",
+          "detour": "60s",
+          "label": "dropoff_student_3",
+          "shipmentLabel": "student_3"
+        }
+      ],
+      "transitions": [
+        {
+          "travelDuration": "540s",
+          "waitDuration": "0s",
+          "totalDuration": "540s"
+        },
+        {
+          "travelDuration": "900s",
+          "waitDuration": "0s",
+          "totalDuration": "900s"
+        },
+        {
+          "travelDuration": "360s",
+          "waitDuration": "0s",
+          "totalDuration": "360s"
+        }
+      ],
+      "metrics": {
+        "performedShipmentCount": 1,
+        "travelDuration": "1800s",
+        "visitDuration": "0s"
+      }
+    }
+  ],
+  "metrics": {
+    "aggregatedRouteMetrics": {
+      "performedShipmentCount": 3,
+      "travelDuration": "4680s"
+    }
+  }
+}

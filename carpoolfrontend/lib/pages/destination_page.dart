@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/destination.dart';
+import '../models/place_selection.dart';
+import '../models/plan_carpool_models.dart';
 import '../service/api_service.dart';
+import '../storage/demo_planner_store.dart';
 
 class DestinationPage extends StatefulWidget {
   const DestinationPage({super.key});
@@ -11,6 +14,7 @@ class DestinationPage extends StatefulWidget {
 
 class _DestinationPageState extends State<DestinationPage> {
   final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
+  final DemoPlannerStore _store = DemoPlannerStore.instance;
 
   bool loading = true;
   String? error;
@@ -97,6 +101,19 @@ class _DestinationPageState extends State<DestinationPage> {
         destinations = active;
         deletedDestinations = inactive;
       });
+      await _store.ensureLoaded();
+      if (active.isNotEmpty) {
+        final first = active.first;
+        _store.setEvent(
+          EventInput(
+            place: PlaceSelection(
+              placeId: '',
+              description: first.addressText,
+              location: LatLngPoint(lat: 0, lng: 0),
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() => error = 'Failed to load destinations: $e');
     } finally {

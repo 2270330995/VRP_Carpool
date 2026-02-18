@@ -12,9 +12,13 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
+                registry.addMapping("/api/places/**")
                         .allowedOriginPatterns("http://localhost:*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                        .allowedMethods("GET", "OPTIONS")
+                        .allowedHeaders("*");
+                registry.addMapping("/api/optimize/**")
+                        .allowedOriginPatterns("http://localhost:*")
+                        .allowedMethods("GET", "POST", "OPTIONS")
                         .allowedHeaders("*");
             }
         };

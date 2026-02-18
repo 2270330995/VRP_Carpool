@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/passenger.dart';
+import '../models/place_selection.dart';
+import '../models/plan_carpool_models.dart';
 import '../service/api_service.dart';
+import '../storage/demo_planner_store.dart';
 
 class PassengersPage extends StatefulWidget {
   const PassengersPage({super.key});
@@ -11,6 +14,7 @@ class PassengersPage extends StatefulWidget {
 
 class _PassengersPageState extends State<PassengersPage> {
   final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
+  final DemoPlannerStore _store = DemoPlannerStore.instance;
 
   bool _loading = true;
   String? _error;
@@ -45,6 +49,29 @@ class _PassengersPageState extends State<PassengersPage> {
         _passengers = active;
         _deletedPassengers = inactive;
       });
+      await _store.ensureLoaded();
+      final existing = _store.students;
+      final mapped = active.map((p) {
+        StudentInput? match;
+        for (final s in existing) {
+          if (s.id == p.id || s.name == p.name) {
+            match = s;
+            break;
+          }
+        }
+        return StudentInput(
+          id: p.id,
+          name: p.name,
+          home:
+              match?.home ??
+              PlaceSelection(
+                placeId: '',
+                description: p.addressText,
+                location: LatLngPoint(lat: 0, lng: 0),
+              ),
+        );
+      }).toList();
+      _store.setStudents(mapped);
     } catch (e) {
       setState(() {
         _error = 'Failed to load passengers: $e';

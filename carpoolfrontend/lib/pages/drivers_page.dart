@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/driver.dart';
+import '../models/place_selection.dart';
+import '../models/plan_carpool_models.dart';
 import '../service/api_service.dart';
+import '../storage/demo_planner_store.dart';
 
 class DriversPage extends StatefulWidget {
   const DriversPage({super.key});
@@ -11,6 +14,7 @@ class DriversPage extends StatefulWidget {
 
 class _DriversPageState extends State<DriversPage> {
   final ApiService api = ApiService(baseUrl: 'http://localhost:8080');
+  final DemoPlannerStore _store = DemoPlannerStore.instance;
 
   bool _loading = true;
   String? _error;
@@ -45,6 +49,27 @@ class _DriversPageState extends State<DriversPage> {
         _drivers = active;
         _deletedDrivers = inactive;
       });
+      await _store.ensureLoaded();
+      final existing = _store.drivers;
+      final mapped = active.map((d) {
+        final match = existing.cast<DriverInput?>().firstWhere(
+          (e) => e != null && (e.id == d.id || e.name == d.name),
+          orElse: () => null,
+        );
+        return DriverInput(
+          id: d.id,
+          name: d.name,
+          seatCapacity: d.seats,
+          home:
+              match?.home ??
+              PlaceSelection(
+                placeId: '',
+                description: d.addressText,
+                location: LatLngPoint(lat: 0, lng: 0),
+              ),
+        );
+      }).toList();
+      _store.setDrivers(mapped);
     } catch (e) {
       setState(() => _error = 'Failed to load drivers: $e');
     } finally {
