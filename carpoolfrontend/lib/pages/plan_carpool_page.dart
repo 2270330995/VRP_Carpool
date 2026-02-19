@@ -10,6 +10,10 @@ import '../service/places_service.dart';
 import '../storage/demo_planner_store.dart';
 import '../storage/demo_state_store.dart';
 
+const Color _softBlue = Color(0xFF5DA9E9);
+const Color _mintGreen = Color(0xFF7ED957);
+const Color _warmWhite = Color(0xFFFFFAF2);
+
 class PlanCarpoolPage extends StatefulWidget {
   const PlanCarpoolPage({super.key});
 
@@ -473,7 +477,17 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Plan Carpool')),
+      backgroundColor: _warmWhite,
+      appBar: AppBar(
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.emoji_people_rounded, size: 22),
+            SizedBox(width: 8),
+            Text('Plan Carpool'),
+          ],
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -520,8 +534,16 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
                     width: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.route),
-            label: Text(_optimizing ? 'Optimizing...' : 'Optimize'),
+                : const Icon(Icons.auto_awesome_rounded),
+            label: Text(_optimizing ? 'Optimizing...' : 'Optimize Routes'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _softBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           if (_plans.isNotEmpty)
@@ -543,14 +565,21 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
   Widget _buildUnassignedSection() {
     final unassigned = _unassignedStudents();
     return Card(
+      color: const Color(0xFFF7FDFF),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Unassigned Passengers',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const Row(
+              children: [
+                Icon(Icons.assignment_late_outlined, color: _softBlue),
+                SizedBox(width: 8),
+                Text(
+                  'Unassigned Passengers',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             if (unassigned.isEmpty)
@@ -572,14 +601,21 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
 
   Widget _buildGlobalTimeCard() {
     return Card(
+      color: const Color(0xFFEFF8FE),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Global Time Window (optional)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const Row(
+              children: [
+                Icon(Icons.schedule_rounded, color: _softBlue),
+                SizedBox(width: 8),
+                Text(
+                  'Global Time Window (optional)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             TextField(
@@ -609,6 +645,7 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
 
   Widget _buildDriversCard() {
     return Card(
+      color: const Color(0xFFF4FBFF),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -617,9 +654,18 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
             Row(
               children: [
                 const Expanded(
-                  child: Text(
-                    'Drivers',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.directions_car_filled_rounded,
+                        color: _softBlue,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Drivers',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
                 TextButton.icon(
@@ -646,6 +692,7 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
 
   Widget _buildStudentsCard() {
     return Card(
+      color: const Color(0xFFF3FFF0),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -654,9 +701,15 @@ class _PlanCarpoolPageState extends State<PlanCarpoolPage> {
             Row(
               children: [
                 const Expanded(
-                  child: Text(
-                    'Passengers',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Row(
+                    children: [
+                      Icon(Icons.groups_rounded, color: _mintGreen),
+                      SizedBox(width: 8),
+                      Text(
+                        'Passengers',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
                 TextButton.icon(
@@ -691,7 +744,12 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFFF0FAFF),
       child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: Color(0x1A5DA9E9),
+          child: Icon(Icons.flag_rounded, color: _softBlue),
+        ),
         title: const Text('Event Address'),
         subtitle: Text(event.place?.description ?? 'Not selected'),
         trailing: OutlinedButton(
@@ -720,6 +778,7 @@ class _DriverEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -810,6 +869,7 @@ class _StudentEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -873,6 +933,7 @@ class _RoutePlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFFF5FCFF),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -889,7 +950,7 @@ class _RoutePlanCard extends StatelessWidget {
                 ),
                 OutlinedButton.icon(
                   onPressed: onOpenMap,
-                  icon: const Icon(Icons.map_outlined),
+                  icon: const Icon(Icons.navigation_rounded),
                   label: const Text('Open in Google Maps'),
                 ),
               ],
